@@ -35,6 +35,16 @@ services:
       - kma-news-net
     ports:
       - "${BACKEND_PORT:-1337}:1337"
+    volumes:
+      # Only matters when storage=local (AWS_BUCKET unset below) — Strapi's
+      # local-disk upload provider writes into the image's public/uploads at
+      # runtime, which is otherwise container-local and gets wiped on every
+      # `docker compose pull backend && up -d backend`. Bind-mounting a host
+      # dir here makes uploads survive redeploys/host reboots and gives you
+      # a plain directory to back up (tar/rsync) or move to another host —
+      # see README.md, "Persisting local-disk uploads". Harmless no-op when
+      # storage=s3 (nothing ever gets written to this path in that mode).
+      - ./data/backend-uploads:/app/public/uploads
     environment:
       HOST: 0.0.0.0
       PORT: 1337

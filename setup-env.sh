@@ -170,6 +170,18 @@ EOF
 
 chmod 600 "$ENV_FILE"
 
+# docker-compose.yml bind-mounts this for the backend's public/uploads
+# (only actually written to when storage=local, but harmless to create
+# either way) — must exist and be writable by the container's `strapi`
+# user (uid/gid 1000, pinned in kma-news-backend's Dockerfile) before the
+# first `docker compose up -d`, or local-disk uploads will fail with EACCES.
+UPLOADS_DIR="$ROOT_DIR/data/backend-uploads"
+mkdir -p "$UPLOADS_DIR"
+if ! chown 1000:1000 "$UPLOADS_DIR" 2>/dev/null; then
+  echo "⚠ Không tự chown được $UPLOADS_DIR sang uid/gid 1000 (cần quyền root)." >&2
+  echo "  Chạy tay trước khi 'docker compose up -d': sudo chown -R 1000:1000 $UPLOADS_DIR" >&2
+fi
+
 echo ""
 echo "Xong. Đã sinh .env ở gốc repo (chmod 600)."
 echo "Chạy: docker compose pull && docker compose up -d"

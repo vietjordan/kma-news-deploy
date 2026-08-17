@@ -74,6 +74,71 @@ phải domain public) mỗi khi tạo/sửa/xoá/publish/unpublish content — x
 Cố tình **không** dùng tính năng Webhooks trong Strapi admin UI vì nó chặn
 mọi URL không public-reachable (xem `kma-news-backend`'s `CLAUDE.md`).
 
+## Persisting local-disk uploads (storage=local)
+
+Khi `setup-env.sh` chọn `--storage=local` (không dùng MinIO/S3), Strapi ghi
+file upload vào `public/uploads` **bên trong container** — nếu không mount
+ra ngoài, dữ liệu này mất sạch mỗi lần `docker compose pull backend && up -d
+backend` (image mới thay hoàn toàn filesystem cũ) hoặc khi container bị tạo
+lại vì bất kỳ lý do gì. `docker-compose.yml` đã bind-mount sẵn thư mục
+`./data/backend-uploads` (cạnh file này) vào `/app/public/uploads` trong
+container để giải quyết việc đó — file upload giờ sống trên host, độc lập
+với vòng đời container.
+
+**Trước lần `docker compose up -d` đầu tiên** (hoặc sau khi đổi sang dùng
+tính năng này lần đầu): `setup-env.sh` tự tạo `./data/backend-uploads` và
+thử `chown` sang uid/gid `1000` (khớp user `strapi` trong
+`kma-news-backend`'s Dockerfile) — nếu script không đủ quyền chown (không
+chạy bằng root/sudo), nó sẽ in cảnh báo, tự chạy tay:
+
+```bash
+sudo chown -R 1000:1000 ./data/backend-uploads
+```
+
+Thiếu bước này thì Strapi ghi file mới sẽ lỗi `EACCES` dù volume đã mount
+đúng.
+
+**Nếu đã có file upload cũ** (vd trước khi thêm bind mount này, hoặc muốn
+seed lại data cũ) — copy thẳng vào thư mục host, không cần qua container:
+
+```bash
+cp -r /đường/dẫn/uploads/cũ/* ./data/backend-uploads/
+sudo chown -R 1000:1000 ./data/backend-uploads
+```
+
+**Backup**: `./data/backend-uploads` là thư mục thường trên host — `tar`
+hoặc `rsync` bình thường, không cần biết gì về Docker:
+
+```bash
+tar czf backend-uploads-$(date +%F).tar.gz -C data backend-uploads
+```
+
+**Chuyển sang host khác**: dừng backend (`docker compose stop backend`),
+`rsync -a ./data/backend-uploads/ user@host-mới:/path/to/kma-news-deploy/data/backend-uploads/`,
+đảm bảo owner vẫn là uid/gid `1000` ở host mới, rồi `docker compose up -d
+backend` ở đó.
+
+**Giải pháp khác ngoài bind mount** (nếu sau này cần):
+
+- **Named Docker volume** thay vì bind mount — Docker tự quản lý vị trí lưu
+  trên host, tránh vấn đề permission (Docker tự set owner phù hợp), nhưng
+  backup/di chuyển phải qua một container phụ để export/import
+  (`docker run --rm -v <volume>:/data -v $(pwd):/backup alpine tar czf
+  /backup/uploads.tar.gz -C /data .`) thay vì thao tác trực tiếp bằng
+  `tar`/`rsync` như thư mục thường — bất tiện hơn cho một ops repo vốn đã
+  thao tác thủ công, không CD.
+- **Chuyển hẳn sang MinIO/S3** — giải pháp bền nhất về lâu dài: dữ liệu
+  tách hẳn khỏi vòng đời container/host, không phụ thuộc backup thủ công của
+  1 thư mục. `kma-news-backend`'s `config/plugins.ts` đã hỗ trợ sẵn (chỉ cần
+  set `AWS_BUCKET`/`AWS_ENDPOINT`/`AWS_ACCESS_KEY_ID`/`AWS_ACCESS_SECRET` —
+  không cần sửa code), và `kma-news-frontend`'s `MEDIA_ORIGIN` đã sẵn sàng
+  proxy media qua domain riêng của frontend (xem 2 repo đó, mục
+  "Environment"/"Media proxying"). Chỉ cần tự dựng (hoặc thuê) một MinIO/S3
+  instance — dự án hiện chưa có, đây là lý do đang tạm dùng local-disk +
+  bind mount. Khi có MinIO, chạy `setup-env.sh --storage=s3`, di chuyển data
+  cũ từ `./data/backend-uploads` lên bucket bằng `mc mirror` (MinIO client)
+  hoặc `aws s3 sync`, rồi mới chuyển `AWS_BUCKET` sang giá trị thật.
+
 ## Thêm secrets trên GitHub
 
 Cả `kma-news-backend` và `kma-news-frontend` cần cùng bộ **repo secrets** +
@@ -136,4 +201,7 @@ này dùng chung được cho cả 2 repo CI.
   Harbor. Không chạy Postgres/MinIO (đã có sẵn ở nơi khác).
 - `.env.example` — mẫu, copy thành `.env` (hoặc dùng `setup-env.sh`) rồi điền
   giá trị thật. Không commit `.env` thật.
-- `setup-env.sh` — sinh `.env` với secret ngẫu nhiên + hỏi giá trị hạ tầng thật.
+- `setup-env.sh` — sinh `.env` với secret ngẫu nhiên + hỏi giá trị hạ tầng thật;
+  cũng tự tạo `data/backend-uploads/` (xem "Persisting local-disk uploads").
+- `data/backend-uploads/` — bind-mounted vào backend container, không commit
+  (xem `.gitignore` + "Persisting local-disk uploads" ở trên).

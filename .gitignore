@@ -1,2 +1,5 @@
 .DS_Store
 .env
+# Bind-mounted backend uploads (see docker-compose.yml, README.md) — runtime
+# data on this host, not something to version here.
+/data/
