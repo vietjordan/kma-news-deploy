@@ -1,0 +1,91 @@
+# Manual deploy only — there is no CD here. Pull the images the sibling
+# kma-news-backend / kma-news-frontend repos' CI published to Harbor, then run:
+#
+#   ./setup-env.sh   # first time only, or --force to regenerate
+#   docker compose pull
+#   docker compose up -d
+#
+# Postgres and MinIO are assumed to already be running elsewhere (not managed
+# by this file) — point the DATABASE_*/AWS_* env vars below at them. If they
+# happen to run as containers reachable from this same Docker network (join
+# it via `docker network connect kma-news-net <container>`, or attach an
+# external network below), you can reference them by container name instead
+# of an IP/domain — e.g. DATABASE_HOST=postgres, AWS_ENDPOINT=http://minio:9000.
+#
+# NEXT_PUBLIC_* values for the frontend are baked into its image at CI build
+# time (see kma-news-frontend repo's Dockerfile) — they CANNOT be changed via
+# env vars here. To change them, rebuild/republish the frontend image (push
+# to kma-news-frontend) and pull the new tag.
+#
+# IMPORTANT deploy order: when a change touches both backend and frontend,
+# deploy/confirm the new backend is live BEFORE the frontend image is built
+# in CI — kma-news-frontend's build calls the live production backend during
+# generateStaticParams/SSG, so building frontend against a stale backend can
+# break the build or bake in stale data. See README.md, "Deploy order".
+
+services:
+  backend:
+    image: ${HARBOR_HOST:-reg.vittapcode.id.vn}/${HARBOR_PROJECT:-kma-news}/backend:${BACKEND_TAG:-dev}
+    restart: unless-stopped
+    networks:
+      - kma-news-net
+    ports:
+      - "${BACKEND_PORT:-1337}:1337"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 1337
+      NODE_ENV: production
+      APP_KEYS: ${APP_KEYS}
+      API_TOKEN_SALT: ${API_TOKEN_SALT}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET}
+      TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT}
+      JWT_SECRET: ${JWT_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      # Postgres — already running elsewhere, not started by this compose file
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_USERNAME: ${DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_SSL: ${DATABASE_SSL:-false}
+      # MinIO/S3 — already running elsewhere. Leave AWS_BUCKET unset to fall
+      # back to local-disk storage instead (see backend/config/plugins.ts).
+      # Toggle: setup-env.sh --prod's --storage=s3|local prompt sets these
+      # consistently with frontend's MEDIA_ORIGIN below.
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_ACCESS_SECRET: ${AWS_ACCESS_SECRET}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_BUCKET: ${AWS_BUCKET}
+      AWS_ENDPOINT: ${AWS_ENDPOINT}
+      AWS_FORCE_PATH_STYLE: ${AWS_FORCE_PATH_STYLE:-true}
+
+  frontend:
+    image: ${HARBOR_HOST:-reg.vittapcode.id.vn}/${HARBOR_PROJECT:-kma-news}/frontend:${FRONTEND_TAG:-dev}
+    restart: unless-stopped
+    networks:
+      - kma-news-net
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      # Server-only runtime secret — never baked into the client bundle.
+      # See frontend/src/config/env-config.server.ts and
+      # frontend/src/app/api/revalidate/route.ts.
+      REVALIDATE_SECRET: ${REVALIDATE_SECRET}
+      # Server-only — real MinIO/S3 origin+bucket (e.g.
+      # https://minio.example.edu.vn/strapi-uploads). Never sent to the
+      # browser: frontend/src/app/media/[...path]/route.ts fetches from it
+      # server-side and streams the bytes back under this app's own domain,
+      # so the storage origin is never publicly exposed. Leave unset when
+      # AWS_BUCKET above is also unset (storage=local — media is proxied via
+      # /uploads instead, straight to this backend).
+      MEDIA_ORIGIN: ${MEDIA_ORIGIN}
+    depends_on:
+      - backend
+
+networks:
+  kma-news-net:
+    driver: bridge
