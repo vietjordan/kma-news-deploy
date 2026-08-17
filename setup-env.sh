@@ -76,6 +76,7 @@ echo ""
 
 ask_value CORS_ORIGIN_VAL "Domain frontend (CORS_ORIGIN, vd https://news.example.edu.vn)" "" 0
 ask_value API_ENDPOINT_VAL "Domain backend production thật (API_ENDPOINT, frontend server-side gọi vào đây — phải khớp giá trị API_ENDPOINT đã dùng lúc kma-news-frontend CI build image, xem Infisical /kma-news-frontend)" "" 0
+ask_value API_TOKEN_VAL "Strapi API Token (backend admin → Settings → API Tokens, type Read-only — để trống nếu Public role vẫn cố tình để mở)" "" 1
 echo ""
 echo "-- Postgres (đã chạy sẵn ở nơi khác) --"
 ask_value DATABASE_HOST_VAL "DATABASE_HOST" "" 0
@@ -150,6 +151,9 @@ AWS_FORCE_PATH_STYLE=true
 # build image frontend, không thì ISR/dynamic render lúc chạy sẽ gọi vào
 # backend khác với backend đã bake vào các trang static sẵn.
 API_ENDPOINT=$API_ENDPOINT_VAL
+# Strapi API Token — bắt buộc nếu Public role đã bị khoá (xem
+# kma-news-backend's CLAUDE.md, "API access control").
+API_TOKEN=$API_TOKEN_VAL
 # Runtime secret cho /api/revalidate — dùng chung cho CẢ backend (POST tới
 # frontend khi content đổi, xem kma-news-backend's src/index.ts) LẪN
 # frontend (kiểm tra khi nhận POST) — docker-compose.yml đọc cùng 1 biến

@@ -92,6 +92,14 @@ services:
       # re-renders will hit a different backend than the one baked into the
       # image's already-generated pages.
       API_ENDPOINT: ${API_ENDPOINT}
+      # Strapi API Token (Settings → API Tokens in the backend admin,
+      # "Read-only" type) — required once the backend's Public role has had
+      # its find/findOne permissions revoked, so random callers can't read
+      # the API directly (see kma-news-backend's CLAUDE.md, "API access
+      # control"). Unrelated to backend's API_TOKEN_SALT above — that's
+      # Strapi's internal salt for hashing tokens, this is the actual token
+      # value. Leave unset only if the Public role is deliberately still open.
+      API_TOKEN: ${API_TOKEN}
       # Server-only runtime secret — never baked into the client bundle.
       # See frontend/src/config/env-config.server.ts and
       # frontend/src/app/api/revalidate/route.ts.

@@ -121,6 +121,7 @@ CI đọc 2 secret-path khác nhau, cả 2 đều nằm dưới environment `dev
 | Key | Giá trị |
 |---|---|
 | `API_ENDPOINT` | Domain backend production thật đang chạy (vd `https://api.news.example.edu.vn`) — **phải** là backend đã deploy xong, không phải backend sắp deploy (xem "Deploy order" ở trên). Server-only, không baked vào client bundle — nhưng vẫn cần lúc build vì `generateStaticParams` gọi backend trực tiếp. Giá trị này cũng phải khớp với `API_ENDPOINT` trong `.env` ở repo này (`docker-compose.yml`'s frontend service đọc lại lúc runtime), không thì ISR/dynamic render sẽ gọi vào backend khác với backend đã bake vào các trang static sẵn. |
+| `API_TOKEN` | Strapi API Token (Read-only) — bắt buộc nếu backend đã khoá quyền Public role, xem `kma-news-backend`'s CLAUDE.md, "API access control". Cũng phải khớp `API_TOKEN` trong `.env` ở repo này (lý do tương tự `API_ENDPOINT`). |
 | `NEXT_PUBLIC_APP_URL` | Domain frontend production thật (dùng cho canonical/hreflang tags) — baked vào client bundle, không đổi được qua `.env` ở repo này. |
 
 Setup Machine Identity cho `INFISICAL_CLIENT_ID`/`INFISICAL_CLIENT_SECRET`:
