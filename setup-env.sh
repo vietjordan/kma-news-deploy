@@ -150,8 +150,11 @@ AWS_FORCE_PATH_STYLE=true
 # build image frontend, không thì ISR/dynamic render lúc chạy sẽ gọi vào
 # backend khác với backend đã bake vào các trang static sẵn.
 API_ENDPOINT=$API_ENDPOINT_VAL
-# Server-only runtime secret cho /api/revalidate — NEXT_PUBLIC_APP_URL mới
-# là giá trị bake cứng vào image lúc CI build (ở repo kma-news-frontend),
+# Runtime secret cho /api/revalidate — dùng chung cho CẢ backend (POST tới
+# frontend khi content đổi, xem kma-news-backend's src/index.ts) LẪN
+# frontend (kiểm tra khi nhận POST) — docker-compose.yml đọc cùng 1 biến
+# này cho cả 2 service, không lệch nhau được. NEXT_PUBLIC_APP_URL mới là
+# giá trị bake cứng vào image lúc CI build (ở repo kma-news-frontend),
 # không sửa được qua file .env này.
 REVALIDATE_SECRET=$(gen_secret)
 

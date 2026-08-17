@@ -64,6 +64,15 @@ services:
       AWS_BUCKET: ${AWS_BUCKET}
       AWS_ENDPOINT: ${AWS_ENDPOINT}
       AWS_FORCE_PATH_STYLE: ${AWS_FORCE_PATH_STYLE:-true}
+      # On-demand ISR revalidation (see kma-news-backend's src/index.ts
+      # bootstrap) — POSTs to the frontend's /api/revalidate on content
+      # changes. Internal Docker network address, not the public frontend
+      # domain (see kma-news-backend's CLAUDE.md for why this can't use
+      # Strapi's admin Webhooks UI instead). REVALIDATE_SECRET below must be
+      # the exact same value as frontend's REVALIDATE_SECRET — both read
+      # from the same var here so they can't drift apart.
+      REVALIDATE_URL: http://frontend:3000/api/revalidate
+      REVALIDATE_SECRET: ${REVALIDATE_SECRET}
 
   frontend:
     image: ${HARBOR_HOST:-reg.vittapcode.id.vn}/${HARBOR_PROJECT:-kma-news}/frontend:${FRONTEND_TAG:-dev}

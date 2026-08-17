@@ -64,6 +64,16 @@ rủi ro.
 Đổi `BACKEND_TAG`/`FRONTEND_TAG` trong `.env` về tag cũ hơn (xem tag có sẵn
 trên Harbor), rồi `docker compose pull && docker compose up -d` lại.
 
+## Revalidation (ISR) tự động khi sửa content
+
+`docker-compose.yml` đã nối sẵn: backend POST vào
+`http://frontend:3000/api/revalidate` (địa chỉ nội bộ Docker network, không
+phải domain public) mỗi khi tạo/sửa/xoá/publish/unpublish content — xem
+`kma-news-backend`'s `src/index.ts`. Không cần cấu hình gì thêm ở đây,
+`setup-env.sh` tự sinh `REVALIDATE_SECRET` dùng chung cho cả 2 service.
+Cố tình **không** dùng tính năng Webhooks trong Strapi admin UI vì nó chặn
+mọi URL không public-reachable (xem `kma-news-backend`'s `CLAUDE.md`).
+
 ## Thêm secrets trên GitHub
 
 Cả `kma-news-backend` và `kma-news-frontend` cần cùng bộ **repo secrets** +
