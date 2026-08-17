@@ -12,14 +12,10 @@
 # external network below), you can reference them by container name instead
 # of an IP/domain — e.g. DATABASE_HOST=postgres, AWS_ENDPOINT=http://minio:9000.
 #
-# NEXT_PUBLIC_APP_URL is baked into the frontend image at CI build time (see
-# kma-news-frontend repo's Dockerfile) — it CANNOT be changed via env vars
-# here. To change it, rebuild/republish the frontend image (push to
-# kma-news-frontend) and pull the new tag. API_ENDPOINT below is different:
-# server-only, so it's read live from this file at container start —
-# changing it here + `docker compose up -d frontend` takes effect
-# immediately for ISR/dynamic re-renders (already-statically-generated
-# pages stay as they were until revalidated).
+# NEXT_PUBLIC_* values for the frontend are baked into its image at CI build
+# time (see kma-news-frontend repo's Dockerfile) — they CANNOT be changed via
+# env vars here. To change them, rebuild/republish the frontend image (push
+# to kma-news-frontend) and pull the new tag.
 #
 # IMPORTANT deploy order: when a change touches both backend and frontend,
 # deploy/confirm the new backend is live BEFORE the frontend image is built
@@ -75,14 +71,6 @@ services:
     environment:
       NODE_ENV: production
       HOSTNAME: 0.0.0.0
-      # Server-only, no NEXT_PUBLIC_ prefix — nothing client-side calls the
-      # backend directly (all requests go through server components/route
-      # handlers), so this is never inlined into the client bundle. Must
-      # match what kma-news-frontend's CI used as the API_ENDPOINT
-      # build-arg for the image currently deployed, or ISR/dynamic
-      # re-renders will hit a different backend than the one baked into the
-      # image's already-generated pages.
-      API_ENDPOINT: ${API_ENDPOINT}
       # Server-only runtime secret — never baked into the client bundle.
       # See frontend/src/config/env-config.server.ts and
       # frontend/src/app/api/revalidate/route.ts.

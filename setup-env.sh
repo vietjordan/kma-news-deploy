@@ -75,7 +75,6 @@ echo "  ở nơi khác, script không đoán được."
 echo ""
 
 ask_value CORS_ORIGIN_VAL "Domain frontend (CORS_ORIGIN, vd https://news.example.edu.vn)" "" 0
-ask_value API_ENDPOINT_VAL "Domain backend production thật (API_ENDPOINT, frontend server-side gọi vào đây — phải khớp giá trị API_ENDPOINT đã dùng lúc kma-news-frontend CI build image, xem Infisical /kma-news-frontend)" "" 0
 echo ""
 echo "-- Postgres (đã chạy sẵn ở nơi khác) --"
 ask_value DATABASE_HOST_VAL "DATABASE_HOST" "" 0
@@ -145,14 +144,10 @@ AWS_BUCKET=$AWS_BUCKET_VAL
 AWS_ENDPOINT=$AWS_ENDPOINT_VAL
 AWS_FORCE_PATH_STYLE=true
 
-# --- Frontend (Next.js) ---
-# Server-only, không NEXT_PUBLIC_ — nên khớp API_ENDPOINT đã dùng lúc CI
-# build image frontend, không thì ISR/dynamic render lúc chạy sẽ gọi vào
-# backend khác với backend đã bake vào các trang static sẵn.
-API_ENDPOINT=$API_ENDPOINT_VAL
-# Server-only runtime secret cho /api/revalidate — NEXT_PUBLIC_APP_URL mới
-# là giá trị bake cứng vào image lúc CI build (ở repo kma-news-frontend),
-# không sửa được qua file .env này.
+# --- Frontend (Next.js) — secret tự sinh ngẫu nhiên ---
+# Server-only runtime secret cho /api/revalidate — NEXT_PUBLIC_* được bake
+# cứng vào image lúc CI build (ở repo kma-news-frontend), không sửa được
+# qua file .env này.
 REVALIDATE_SECRET=$(gen_secret)
 
 # Server-only — origin MinIO/S3 thật, KHÔNG lộ ra client (xem

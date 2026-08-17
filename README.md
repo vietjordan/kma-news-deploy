@@ -16,7 +16,7 @@ image đó lên server là thao tác thủ công, làm từ repo này.
 Trước đây backend + frontend + deploy config nằm chung 1 monorepo. Tách ra vì:
 - Backend và frontend deploy độc lập, không cần đồng bộ commit.
 - Frontend CI build gọi thẳng vào backend production thật lúc
-  `generateStaticParams`/SSG (dùng `API_ENDPOINT`, server-only — xem
+  `generateStaticParams`/SSG (baked `NEXT_PUBLIC_API_ENDPOINT` — xem
   kma-news-frontend's CLAUDE.md, mục "Environment"/"Deployment"). Gộp chung
   1 repo dễ khiến người ta tưởng push 1 commit là cả 2 CI "cùng lúc" ra bản
   mới nhất — thực ra frontend CI vẫn gọi vào backend **đang chạy trên
@@ -106,12 +106,12 @@ CI đọc 2 secret-path khác nhau, cả 2 đều nằm dưới environment `dev
 | `HARBOR_USERNAME` | Username tài khoản robot/user có quyền push lên `reg.vittapcode.id.vn/kma-news` |
 | `HARBOR_PASSWORD` | Password/token tương ứng |
 
-### `/kma-news-frontend` — chỉ dùng bởi frontend CI (build-time)
+### `/kma-news-frontend` — chỉ dùng bởi frontend CI (build-time, baked vào bundle)
 
 | Key | Giá trị |
 |---|---|
-| `API_ENDPOINT` | Domain backend production thật đang chạy (vd `https://api.news.example.edu.vn`) — **phải** là backend đã deploy xong, không phải backend sắp deploy (xem "Deploy order" ở trên). Server-only, không baked vào client bundle — nhưng vẫn cần lúc build vì `generateStaticParams` gọi backend trực tiếp. Giá trị này cũng phải khớp với `API_ENDPOINT` trong `.env` ở repo này (`docker-compose.yml`'s frontend service đọc lại lúc runtime), không thì ISR/dynamic render sẽ gọi vào backend khác với backend đã bake vào các trang static sẵn. |
-| `NEXT_PUBLIC_APP_URL` | Domain frontend production thật (dùng cho canonical/hreflang tags) — baked vào client bundle, không đổi được qua `.env` ở repo này. |
+| `NEXT_PUBLIC_API_ENDPOINT` | Domain backend production thật đang chạy (vd `https://api.news.example.edu.vn`) — **phải** là backend đã deploy xong, không phải backend sắp deploy (xem "Deploy order" ở trên) |
+| `NEXT_PUBLIC_APP_URL` | Domain frontend production thật (dùng cho canonical/hreflang tags) |
 
 Setup Machine Identity cho `INFISICAL_CLIENT_ID`/`INFISICAL_CLIENT_SECRET`:
 Infisical dashboard → Organization Settings → Machine Identities → tạo mới
